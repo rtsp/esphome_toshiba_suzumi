@@ -29,7 +29,7 @@ constexpr const char* SPECIAL_MODE_FLOOR = "Floor";
 constexpr const char* SPECIAL_MODE_COMFORT = "Comfort";
 
 // codes as reverse engineered from Toshiba AC communication with original Wifi module.
-enum class MODE { HEAT_COOL = 65, COOL = 66, HEAT = 67, DRY = 68, FAN_ONLY = 69 };
+enum class MODE { AUTO = 65, COOL = 66, HEAT = 67, DRY = 68, FAN_ONLY = 69 };
 enum class FAN {
   FAN_QUIET = 49,
   FAN_LOW = 50,
