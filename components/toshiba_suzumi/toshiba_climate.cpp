@@ -416,7 +416,7 @@ ClimateTraits ToshibaClimateUart::traits() {
     climate::CLIMATE_MODE_OFF,
     climate::CLIMATE_MODE_AUTO,
     climate::CLIMATE_MODE_COOL,
-    climate::CLIMATE_MODE_HEAT,
+    // climate::CLIMATE_MODE_HEAT,
     climate::CLIMATE_MODE_DRY,
     climate::CLIMATE_MODE_FAN_ONLY
   });
