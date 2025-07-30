@@ -41,7 +41,19 @@ enum class FAN {
   FANMODE_5 = 54,
   AUTO = 65
 };
-enum class SWING { OFF = 49, BOTH =  67, VERTICAL = 65, HORIZONTAL = 66 };
+
+enum class SWING {
+  OFF = 49,
+  VERTICAL = 65,
+  HORIZONTAL = 66,
+  BOTH = 67,
+  FIXED_1 = 80,
+  FIXED_2 = 81,
+  FIXED_3 = 82,
+  FIXED_4 = 83,
+  FIXED_5 = 84
+};
+
 enum class STATE { ON = 48, OFF = 49 };
 enum class PWR_LEVEL { PCT_50 = 50, PCT_75 = 75, PCT_100 = 100 };
 

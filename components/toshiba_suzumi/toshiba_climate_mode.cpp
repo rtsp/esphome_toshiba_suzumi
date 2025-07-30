@@ -155,6 +155,16 @@ const SWING ClimateSwingModeToInt(climate::ClimateSwingMode mode) {
       return SWING::VERTICAL;
     case climate::CLIMATE_SWING_HORIZONTAL:
       return SWING::HORIZONTAL;
+    case climate::CLIMATE_SWING_FIXED_1:
+      return SWING::FIXED_1;
+    case climate::CLIMATE_SWING_FIXED_2:
+      return SWING::FIXED_2;
+    case climate::CLIMATE_SWING_FIXED_3:
+      return SWING::FIXED_3;
+    case climate::CLIMATE_SWING_FIXED_4:
+      return SWING::FIXED_4;
+    case climate::CLIMATE_SWING_FIXED_5:
+      return SWING::FIXED_5;
     default:
       ESP_LOGE(TAG, "Invalid swing mode %d.", mode);
       return SWING::OFF;
@@ -171,6 +181,16 @@ const climate::ClimateSwingMode IntToClimateSwingMode(SWING mode) {
       return climate::CLIMATE_SWING_HORIZONTAL;
     case SWING::BOTH:
       return climate::CLIMATE_SWING_BOTH;
+    case SWING::FIXED_1:
+      return climate::CLIMATE_SWING_FIXED_1;
+    case SWING::FIXED_2:
+      return climate::CLIMATE_SWING_FIXED_2;
+    case SWING::FIXED_3:
+      return climate::CLIMATE_SWING_FIXED_3;
+    case SWING::FIXED_4:
+      return climate::CLIMATE_SWING_FIXED_4;
+    case SWING::FIXED_5:
+      return climate::CLIMATE_SWING_FIXED_5;
     default:
       ESP_LOGE(TAG, "Invalid swing mode %d.", mode);
       return climate::CLIMATE_SWING_OFF;
