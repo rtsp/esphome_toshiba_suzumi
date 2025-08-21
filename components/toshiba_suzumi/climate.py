@@ -25,6 +25,7 @@ CONF_SUPPORTED_PRESETS = "supported_presets"
 
 FEATURE_HORIZONTAL_SWING = "horizontal_swing"
 MIN_TEMP = "min_temp"
+DISABLE_HEAT_MODE = "disable_heat_mode"
 DISABLE_WIFI_LED = "disable_wifi_led"
 
 toshiba_ns = cg.esphome_ns.namespace("toshiba_suzumi")
@@ -47,6 +48,7 @@ if version.parse(ESPHOME_VERSION) >= version.parse("2025.5.0"):
                 cv.GenerateID(): cv.declare_id(ToshibaPwrModeSelect),
             }),
             cv.Optional(FEATURE_HORIZONTAL_SWING): cv.boolean,
+            cv.Optional(DISABLE_HEAT_MODE): cv.boolean,
             cv.Optional(DISABLE_WIFI_LED): cv.boolean,
             # CONF_SPECIAL_MODE is deprecated - replaced by CONF_SUPPORTED_PRESETS
             # Keep it for backward compatibility
@@ -57,7 +59,7 @@ if version.parse(ESPHOME_VERSION) >= version.parse("2025.5.0"):
             cv.Optional(CONF_SUPPORTED_PRESETS): cv.ensure_list(cv.one_of("Standard","Hi POWER","ECO","Fireplace 1","Fireplace 2","8 degrees","Silent#1","Silent#2","Sleep","Floor","Comfort")),
             cv.Optional(MIN_TEMP): cv.int_,
         }
-    ).extend(uart.UART_DEVICE_SCHEMA).extend(cv.polling_component_schema("120s"))    
+    ).extend(uart.UART_DEVICE_SCHEMA).extend(cv.polling_component_schema("120s"))
 else:
     _LOGGER.info("[TOSHIBA SUZUMI] Using legacy climate schema (ESPHome < 2025.5.0)")
     CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
@@ -73,6 +75,7 @@ else:
                 cv.GenerateID(): cv.declare_id(ToshibaPwrModeSelect),
             }),
             cv.Optional(FEATURE_HORIZONTAL_SWING): cv.boolean,
+            cv.Optional(DISABLE_HEAT_MODE): cv.boolean,
             cv.Optional(DISABLE_WIFI_LED): cv.boolean,
             # CONF_SPECIAL_MODE is deprecated - replaced by CONF_SUPPORTED_PRESETS
             # Keep it for backward compatibility
@@ -106,6 +109,9 @@ async def to_code(config):
 
     if MIN_TEMP in config:
         cg.add(var.set_min_temp(config[MIN_TEMP]))
+
+    if DISABLE_HEAT_MODE in config:
+        cg.add(var.disable_heat_mode(True))
 
     if DISABLE_WIFI_LED in config:
         cg.add(var.disable_wifi_led(True))
