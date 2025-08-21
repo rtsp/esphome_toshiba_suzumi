@@ -445,14 +445,26 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
 
 ClimateTraits ToshibaClimateUart::traits() {
   auto traits = climate::ClimateTraits();
-  traits.set_supported_modes({
-    climate::CLIMATE_MODE_OFF,
-    climate::CLIMATE_MODE_AUTO,
-    climate::CLIMATE_MODE_COOL,
-    climate::CLIMATE_MODE_HEAT,
-    climate::CLIMATE_MODE_DRY,
-    climate::CLIMATE_MODE_FAN_ONLY
-  });
+
+  if (this -> heat_mode_disabled_) {
+    traits.set_supported_modes({
+      climate::CLIMATE_MODE_OFF,
+      climate::CLIMATE_MODE_AUTO,
+      climate::CLIMATE_MODE_COOL,
+      climate::CLIMATE_MODE_DRY,
+      climate::CLIMATE_MODE_FAN_ONLY
+    });
+  } else {
+    traits.set_supported_modes({
+      climate::CLIMATE_MODE_OFF,
+      climate::CLIMATE_MODE_AUTO,
+      climate::CLIMATE_MODE_COOL,
+      climate::CLIMATE_MODE_HEAT,
+      climate::CLIMATE_MODE_DRY,
+      climate::CLIMATE_MODE_FAN_ONLY
+    });
+  }
+
   if (this -> horizontal_swing_) {
     traits.set_supported_swing_modes({
       climate::CLIMATE_SWING_OFF,
