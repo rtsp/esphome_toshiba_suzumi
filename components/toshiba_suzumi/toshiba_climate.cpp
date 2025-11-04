@@ -173,6 +173,11 @@ void ToshibaClimateUart::process_command_queue_() {
       // delay command did not finished yet
       return;
     }
+    // DELAY commands don't send data over UART, just remove them from queue
+    if (newCommand.cmd == ToshibaCommandType::DELAY) {
+      this->command_queue_.erase(this->command_queue_.begin());
+      return;
+    }    
     this->send_to_uart(this->command_queue_.front());
     this->command_queue_.erase(this->command_queue_.begin());
   }
