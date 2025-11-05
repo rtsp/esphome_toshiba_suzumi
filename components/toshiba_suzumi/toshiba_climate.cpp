@@ -315,9 +315,11 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         if (climate_preset.has_value()) {
           // Use standard preset
           this->preset = climate_preset.value();
+          this->custom_preset.reset();
         } else {
           // Use custom preset
           this->custom_preset = preset_string;
+          this->preset.reset();
         }
       }
       this->publish_state();
@@ -462,7 +464,10 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
     if (special_mode.has_value()) {
       ESP_LOGD(TAG, "Setting preset to %s", preset_string.c_str());
       this->sendCmd(ToshibaCommandType::SPECIAL_MODE, static_cast<uint8_t>(special_mode.value()));
+      // Set standard preset
       this->preset = preset;
+      // Reset custom preset
+      this->custom_preset.reset();
 
       // Handle special temperature logic for "8 degrees" mode
       if (special_mode.value() != this->special_mode_) {
@@ -489,7 +494,10 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
     if (special_mode.has_value()) {
       ESP_LOGD(TAG, "Setting custom preset to %s", custom_preset.c_str());
       this->sendCmd(ToshibaCommandType::SPECIAL_MODE, static_cast<uint8_t>(special_mode.value()));
+      // Set custom preset
       this->custom_preset = custom_preset;
+      // Reset standard preset
+      this->preset.reset();
 
       // Handle special temperature logic for "8 degrees" mode
       if (special_mode.value() != this->special_mode_) {
