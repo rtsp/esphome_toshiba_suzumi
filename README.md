@@ -8,7 +8,13 @@ This component use ESPHome UART to connect with Toshiba AC and communicates dire
 
 <a href="https://www.buymeacoffee.com/pedobryk" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-### Supported Toshiba units
+## ‼️ Does not work with ESPHome 2025.10.x yet ‼️
+ESPHome 2025.10 switched to use Arduino as IDF component (see https://esphome.io/changelog/2025.10.0/#arduino-as-idf-component-major-architectural-change). There is a lot of report about UART not working properly in ESP-IDF (like here https://github.com/echavet/MitsubishiCN105ESPHome/issues/378). Using ESP-IDF framework or upgrading to ESPHome 2025.10 breaks this component too.
+
+**At this moment, it's recommended not to upgrade past ESPHome 2025.9.**
+
+
+## Supported Toshiba units
 
 Any unit which have an option to purchase o wifi adapter RB-N105S-G/RB-N106S-G:
 
@@ -165,22 +171,6 @@ button:
 and then watching ESPHome logs for data:
 
 ![ESPHome log](/images/scan_log.png)
-
-### ESPHome older than 2023.3.0
-
-There is a change in internal implementation of climate control in 2023.3.0 - the fan mode Quiet is implemented as regular fan mode. As a result, the implementation of Quiet mode as custom fan mode won't work anymore.
-
-It was fixed in current code, but users with ESPHome older than 2023.3.0 needs to use older tag:
-
-* users with **ESPHome 2023.3.0** or newer should use branch master
-
-    `url: https://github.com/pedobry/esphome_toshiba_suzumi`
-
-* users with **ESPHome 2023.2.x and older** should use branch 2023.2.0:
-
-    ```
-    url: https://github.com/pedobry/esphome_toshiba_suzumi
-    ref: 2023.2.0
     ```
 
 ## Links
