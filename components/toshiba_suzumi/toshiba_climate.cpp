@@ -147,7 +147,12 @@ void ToshibaClimateUart::setup() {
 
   if (this->wifi_led_disabled_) {
     // Disable Wifi LED
-    this->sendCmd(ToshibaCommandType::WIFI_LED, 128);
+    this->sendCmd(ToshibaCommandType::WIFI_LED_1, 0x00);
+    this->sendCmd(ToshibaCommandType::WIFI_LED_2, 0x00);
+  } else {
+    // Enable Wifi LED
+    this->sendCmd(ToshibaCommandType::WIFI_LED_1, 0x05);
+    this->sendCmd(ToshibaCommandType::WIFI_LED_2, 0x05);
   }
 }
 
@@ -177,7 +182,7 @@ void ToshibaClimateUart::process_command_queue_() {
     if (newCommand.cmd == ToshibaCommandType::DELAY) {
       this->command_queue_.erase(this->command_queue_.begin());
       return;
-    }    
+    }
     this->send_to_uart(this->command_queue_.front());
     this->command_queue_.erase(this->command_queue_.begin());
   }
