@@ -80,7 +80,20 @@ bool ToshibaClimateUart::validate_message_() {
   }
 
   // Byte 7: LENGTH
-  uint8_t length = 6 + data[6] + 1;  // prefix + data + checksum
+  uint8_t length;
+
+  // Special handling for long energy messages
+  if (at > 14 && data[3] == 0x90) {
+    // For energy messages, length seems to be at a different position
+    // and indicates the length of the data *after* the command byte.
+    // Total length = header (15 bytes) + data length + checksum (1 byte)
+    length = 15 + data[13] + 1;
+  } else if (at > 6) {
+    // Standard message length calculation
+    length = 6 + data[6] + 1;  // prefix + data + checksum
+  } else {
+    return true; // Not enough data yet to determine length
+  }
 
   // wait until all data is read
   if (at < length)
@@ -213,6 +226,27 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
   uint8_t length = rawData.size();
   ToshibaCommandType sensor;
   uint8_t value;
+  uint16_t value16;
+
+  // Handle special long responses for energy consumption
+  if (length > 20 && rawData[2] == 0x03 && rawData[3] == 0x90) {
+    sensor = static_cast<ToshibaCommandType>(rawData[14]);
+    switch(sensor) {
+      case ToshibaCommandType::ENERGY_DAILY:
+        // Energy values seem to be 16-bit values (little-endian) at offset 15
+        value16 = (rawData[16] << 8) | rawData[15];
+        ESP_LOGI(TAG, "Received energy consumption (DAILY): %d Wh", value16);
+        if (energy_sensor_ != nullptr) {
+          energy_sensor_->publish_state(value16);
+        }
+        break;
+      case ToshibaCommandType::ENERGY_WEEKLY:
+      case ToshibaCommandType::ENERGY_MONTHLY:
+      case ToshibaCommandType::ENERGY_YEARLY:
+        ESP_LOGD(TAG, "Ignoring energy consumption for %02X as only ENERGY_DAILY is currently supported by a sensor.", (uint8_t)sensor);
+        break;
+    }
+  }
 
   switch (length) {
     case 15:  // response to requestData with the actual value of sensor/setting
@@ -287,30 +321,6 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       if (outdoor_temp_sensor_ != nullptr) {
         ESP_LOGI(TAG, "Received outdoor temp: %d °C", (int8_t) value);
         outdoor_temp_sensor_->publish_state((int8_t) value);
-      }
-      break;
-    case ToshibaCommandType::ENERGY_DAILY:
-      if (energy_sensor_ != nullptr) {
-        ESP_LOGI(TAG, "Received energy consumption (ENERGY_DAILY): %d Wh", value);
-        energy_sensor_->publish_state(value);
-      }
-      break;
-    case ToshibaCommandType::ENERGY_WEEKLY:
-      if (energy_sensor_ != nullptr) {
-        ESP_LOGI(TAG, "Received energy consumption (ENERGY_WEEKLY): %d Wh", value);
-        energy_sensor_->publish_state(value);
-      }
-      break;
-    case ToshibaCommandType::ENERGY_MONTHLY:
-      if (energy_sensor_ != nullptr) {
-        ESP_LOGI(TAG, "Received energy consumption (ENERGY_MONTHLY): %d Wh", value);
-        energy_sensor_->publish_state(value);
-      }
-      break;
-    case ToshibaCommandType::ENERGY_YEARLY:
-      if (energy_sensor_ != nullptr) {
-        ESP_LOGI(TAG, "Received energy consumption (ENERGY_YEARLY): %d Wh", value);
-        energy_sensor_->publish_state(value);
       }
       break;
     case ToshibaCommandType::POWER_SEL: {
