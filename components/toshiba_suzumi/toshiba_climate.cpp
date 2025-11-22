@@ -137,6 +137,7 @@ void ToshibaClimateUart::getInitData() {
   this->requestData(ToshibaCommandType::ROOM_TEMP);
   this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   this->requestData(ToshibaCommandType::SPECIAL_MODE);
+  this->requestData(ToshibaCommandType::ENERGY_DAILY);
 }
 
 void ToshibaClimateUart::setup() {
@@ -178,7 +179,7 @@ void ToshibaClimateUart::process_command_queue_() {
     if (newCommand.cmd == ToshibaCommandType::DELAY) {
       this->command_queue_.erase(this->command_queue_.begin());
       return;
-    }    
+    }
     this->send_to_uart(this->command_queue_.front());
     this->command_queue_.erase(this->command_queue_.begin());
   }
@@ -285,6 +286,12 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         outdoor_temp_sensor_->publish_state((int8_t) value);
       }
       break;
+    case ToshibaCommandType::ENERGY_DAILY:
+      if (energy_sensor_ != nullptr) {
+        ESP_LOGI(TAG, "Received energy consumption: %d Wh", value);
+        energy_sensor_->publish_state(value);
+      }
+      break;
     case ToshibaCommandType::POWER_SEL: {
       auto pwr_level = IntToPowerLevel(static_cast<PWR_LEVEL>(value));
       ESP_LOGI(TAG, "Received power select: %d", value);
@@ -340,6 +347,9 @@ void ToshibaClimateUart::dump_config() {
   if (outdoor_temp_sensor_ != nullptr) {
     LOG_SENSOR("", "Outdoor Temp", this->outdoor_temp_sensor_);
   }
+  if (energy_sensor_ != nullptr) {
+    LOG_SENSOR("", "Energy Sensor", this->energy_sensor_);
+  }
   if (pwr_select_ != nullptr) {
     LOG_SELECT("", "Power selector", this->pwr_select_);
   }
@@ -361,6 +371,9 @@ void ToshibaClimateUart::update() {
   this->requestData(ToshibaCommandType::ROOM_TEMP);
   if (outdoor_temp_sensor_ != nullptr) {
     this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
+  }
+  if (energy_sensor_ != nullptr) {
+    this->requestData(ToshibaCommandType::ENERGY_DAILY);
   }
 }
 

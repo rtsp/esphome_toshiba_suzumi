@@ -6,6 +6,9 @@ from esphome.const import (
     STATE_CLASS_MEASUREMENT,
     UNIT_CELSIUS,
     DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_ENERGY,
+    STATE_CLASS_TOTAL_INCREASING,
+    UNIT_WATT_HOURS,
     __version__ as ESPHOME_VERSION
 )
 from packaging import version
@@ -18,6 +21,7 @@ AUTO_LOAD = ["sensor", "select"]
 
 CONF_ROOM_TEMP = "room_temp"
 CONF_OUTDOOR_TEMP = "outdoor_temp"
+CONF_ENERGY_SENSOR = "energy_sensor"
 CONF_PWR_SELECT = "power_select"
 CONF_SPECIAL_MODE = "special_mode" # deprecated - replaced by CONF_SUPPORTED_PRESETS
 CONF_SPECIAL_MODE_MODES = "modes" # deprecated - replaced by CONF_SUPPORTED_PRESETS
@@ -43,6 +47,12 @@ if version.parse(ESPHOME_VERSION) >= version.parse("2025.5.0"):
                     accuracy_decimals=0,
                     device_class=DEVICE_CLASS_TEMPERATURE,
                     state_class=STATE_CLASS_MEASUREMENT,
+                ),
+            cv.Optional(CONF_ENERGY_SENSOR): sensor.sensor_schema(
+                    unit_of_measurement=UNIT_WATT_HOURS,
+                    accuracy_decimals=0,
+                    device_class=DEVICE_CLASS_ENERGY,
+                    state_class=STATE_CLASS_TOTAL_INCREASING,
                 ),
             cv.Optional(CONF_PWR_SELECT): select.select_schema(ToshibaPwrModeSelect).extend({
                 cv.GenerateID(): cv.declare_id(ToshibaPwrModeSelect),
@@ -71,6 +81,12 @@ else:
                     device_class=DEVICE_CLASS_TEMPERATURE,
                     state_class=STATE_CLASS_MEASUREMENT,
                 ),
+            cv.Optional(CONF_ENERGY_SENSOR): sensor.sensor_schema(
+                    unit_of_measurement=UNIT_WATT_HOURS,
+                    accuracy_decimals=0,
+                    device_class=DEVICE_CLASS_ENERGY,
+                    state_class=STATE_CLASS_TOTAL_INCREASING,
+                ),
             cv.Optional(CONF_PWR_SELECT): select.SELECT_SCHEMA.extend({
                 cv.GenerateID(): cv.declare_id(ToshibaPwrModeSelect),
             }),
@@ -98,6 +114,11 @@ async def to_code(config):
         conf = config[CONF_OUTDOOR_TEMP]
         sens = await sensor.new_sensor(conf)
         cg.add(var.set_outdoor_temp_sensor(sens))
+
+    if CONF_ENERGY_SENSOR in config:
+        conf = config[CONF_ENERGY_SENSOR]
+        sens = await sensor.new_sensor(conf)
+        cg.add(var.set_energy_sensor(sens))
 
     if CONF_PWR_SELECT in config:
         sel = await select.new_select(config[CONF_PWR_SELECT], options=['50 %', '75 %', '100 %'])
