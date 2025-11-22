@@ -150,10 +150,7 @@ void ToshibaClimateUart::getInitData() {
   this->requestData(ToshibaCommandType::ROOM_TEMP);
   this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   this->requestData(ToshibaCommandType::SPECIAL_MODE);
-  this->requestData(ToshibaCommandType::ENERGY_DAILY);
-  this->requestData(ToshibaCommandType::ENERGY_WEEKLY);
   this->requestData(ToshibaCommandType::ENERGY_MONTHLY);
-  this->requestData(ToshibaCommandType::ENERGY_YEARLY);
 }
 
 void ToshibaClimateUart::setup() {
@@ -232,19 +229,28 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
   if (length > 20 && rawData[2] == 0x03 && rawData[3] == 0x90) {
     sensor = static_cast<ToshibaCommandType>(rawData[14]);
     switch(sensor) {
-      case ToshibaCommandType::ENERGY_DAILY:
+      case ToshibaCommandType::ENERGY_MONTHLY: {
         // Energy values seem to be 16-bit values (little-endian) at offset 15
         value16 = (rawData[16] << 8) | rawData[15];
-        ESP_LOGI(TAG, "Received energy consumption (DAILY): %d Wh", value16);
+        ESP_LOGI(TAG, "Received energy consumption (MONTHLY): %d Wh", value16);
         if (energy_sensor_ != nullptr) {
           energy_sensor_->publish_state(value16);
         }
+        std::string data_str;
+        for (size_t i = 6; i < rawData.size(); i++) {
+          data_str += to_string(rawData[i]) + " ";
+        }
+        ESP_LOGD(TAG, "Raw DA data (base10): %s", data_str.c_str());
         break;
-      case ToshibaCommandType::ENERGY_WEEKLY:
-      case ToshibaCommandType::ENERGY_MONTHLY:
-      case ToshibaCommandType::ENERGY_YEARLY:
-        ESP_LOGD(TAG, "Ignoring energy consumption for %02X as only ENERGY_DAILY is currently supported by a sensor.", (uint8_t)sensor);
+      }
+      case ToshibaCommandType::ENERGY_YEARLY: {
+        std::string data_str;
+        for (size_t i = 6; i < rawData.size(); i++) {
+          data_str += to_string(rawData[i]) + " ";
+        }
+        ESP_LOGD(TAG, "Raw DB data (base10): %s", data_str.c_str());
         break;
+      }
     }
   }
 
@@ -404,16 +410,7 @@ void ToshibaClimateUart::update() {
     this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   }
   if (energy_sensor_ != nullptr) {
-    this->requestData(ToshibaCommandType::ENERGY_DAILY);
-  }
-  if (energy_sensor_ != nullptr) {
-    this->requestData(ToshibaCommandType::ENERGY_WEEKLY);
-  }
-  if (energy_sensor_ != nullptr) {
     this->requestData(ToshibaCommandType::ENERGY_MONTHLY);
-  }
-  if (energy_sensor_ != nullptr) {
-    this->requestData(ToshibaCommandType::ENERGY_YEARLY);
   }
 }
 
