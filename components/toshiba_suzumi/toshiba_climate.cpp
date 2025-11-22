@@ -138,6 +138,9 @@ void ToshibaClimateUart::getInitData() {
   this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   this->requestData(ToshibaCommandType::SPECIAL_MODE);
   this->requestData(ToshibaCommandType::ENERGY_DAILY);
+  this->requestData(ToshibaCommandType::ENERGY_WEEKLY);
+  this->requestData(ToshibaCommandType::ENERGY_MONTHLY);
+  this->requestData(ToshibaCommandType::ENERGY_YEARLY);
 }
 
 void ToshibaClimateUart::setup() {
@@ -288,7 +291,25 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       break;
     case ToshibaCommandType::ENERGY_DAILY:
       if (energy_sensor_ != nullptr) {
-        ESP_LOGI(TAG, "Received energy consumption: %d Wh", value);
+        ESP_LOGI(TAG, "Received energy consumption (ENERGY_DAILY): %d Wh", value);
+        energy_sensor_->publish_state(value);
+      }
+      break;
+    case ToshibaCommandType::ENERGY_WEEKLY:
+      if (energy_sensor_ != nullptr) {
+        ESP_LOGI(TAG, "Received energy consumption (ENERGY_WEEKLY): %d Wh", value);
+        energy_sensor_->publish_state(value);
+      }
+      break;
+    case ToshibaCommandType::ENERGY_MONTHLY:
+      if (energy_sensor_ != nullptr) {
+        ESP_LOGI(TAG, "Received energy consumption (ENERGY_MONTHLY): %d Wh", value);
+        energy_sensor_->publish_state(value);
+      }
+      break;
+    case ToshibaCommandType::ENERGY_YEARLY:
+      if (energy_sensor_ != nullptr) {
+        ESP_LOGI(TAG, "Received energy consumption (ENERGY_YEARLY): %d Wh", value);
         energy_sensor_->publish_state(value);
       }
       break;
@@ -374,6 +395,15 @@ void ToshibaClimateUart::update() {
   }
   if (energy_sensor_ != nullptr) {
     this->requestData(ToshibaCommandType::ENERGY_DAILY);
+  }
+  if (energy_sensor_ != nullptr) {
+    this->requestData(ToshibaCommandType::ENERGY_WEEKLY);
+  }
+  if (energy_sensor_ != nullptr) {
+    this->requestData(ToshibaCommandType::ENERGY_MONTHLY);
+  }
+  if (energy_sensor_ != nullptr) {
+    this->requestData(ToshibaCommandType::ENERGY_YEARLY);
   }
 }
 
