@@ -150,7 +150,10 @@ void ToshibaClimateUart::getInitData() {
   this->requestData(ToshibaCommandType::ROOM_TEMP);
   this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   this->requestData(ToshibaCommandType::SPECIAL_MODE);
+  this->requestData(ToshibaCommandType::ENERGY_DAILY);
   this->requestData(ToshibaCommandType::ENERGY_MONTHLY);
+  this->requestData(ToshibaCommandType::ENERGY_WEEKLY);
+  this->requestData(ToshibaCommandType::ENERGY_YEARLY);
 }
 
 void ToshibaClimateUart::setup() {
@@ -229,6 +232,22 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
   if (length > 20 && rawData[2] == 0x03 && rawData[3] == 0x90) {
     sensor = static_cast<ToshibaCommandType>(rawData[14]);
     switch(sensor) {
+      case ToshibaCommandType::ENERGY_DAILY: {
+        std::string data_str;
+        for (size_t i = 6; i < rawData.size(); i++) {
+          data_str += to_string(rawData[i]) + " ";
+        }
+        ESP_LOGD(TAG, "Raw D8 data (base10): %s", data_str.c_str());
+        break;
+      }
+      case ToshibaCommandType::ENERGY_WEEKLY: {
+        std::string data_str;
+        for (size_t i = 6; i < rawData.size(); i++) {
+          data_str += to_string(rawData[i]) + " ";
+        }
+        ESP_LOGD(TAG, "Raw D9 data (base10): %s", data_str.c_str());
+        break;
+      }
       case ToshibaCommandType::ENERGY_MONTHLY: {
         // Energy values seem to be 16-bit values (little-endian) at offset 15
         value16 = (rawData[16] << 8) | rawData[15];
@@ -240,7 +259,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         for (size_t i = 6; i < rawData.size(); i++) {
           data_str += to_string(rawData[i]) + " ";
         }
-        ESP_LOGD(TAG, "Raw DA data (base10): %s", data_str.c_str());
+        ESP_LOGD(TAG, "Raw DA(146) data (base10): %s", data_str.c_str());
         break;
       }
       case ToshibaCommandType::ENERGY_YEARLY: {
@@ -248,7 +267,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         for (size_t i = 6; i < rawData.size(); i++) {
           data_str += to_string(rawData[i]) + " ";
         }
-        ESP_LOGD(TAG, "Raw DB data (base10): %s", data_str.c_str());
+        ESP_LOGD(TAG, "Raw DB(70) data (base10): %s", data_str.c_str());
         break;
       }
     }
@@ -410,7 +429,10 @@ void ToshibaClimateUart::update() {
     this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   }
   if (energy_sensor_ != nullptr) {
+    this->requestData(ToshibaCommandType::ENERGY_DAILY);
     this->requestData(ToshibaCommandType::ENERGY_MONTHLY);
+    this->requestData(ToshibaCommandType::ENERGY_WEEKLY);
+    this->requestData(ToshibaCommandType::ENERGY_YEARLY);
   }
 }
 
