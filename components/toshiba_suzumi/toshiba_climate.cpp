@@ -237,7 +237,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         for (size_t i = 6; i < rawData.size(); i++) {
           data_str += to_string(rawData[i]) + " ";
         }
-        ESP_LOGD(TAG, "Raw D8 data (base10): %s", data_str.c_str());
+        ESP_LOGW(TAG, "Raw D8 data (base10): %s", data_str.c_str());
         break;
       }
       case ToshibaCommandType::ENERGY_WEEKLY: {
@@ -245,7 +245,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         for (size_t i = 6; i < rawData.size(); i++) {
           data_str += to_string(rawData[i]) + " ";
         }
-        ESP_LOGD(TAG, "Raw D9 data (base10): %s", data_str.c_str());
+        ESP_LOGW(TAG, "Raw D9 data (base10): %s", data_str.c_str());
         break;
       }
       case ToshibaCommandType::ENERGY_MONTHLY: {
@@ -259,7 +259,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         for (size_t i = 6; i < rawData.size(); i++) {
           data_str += to_string(rawData[i]) + " ";
         }
-        ESP_LOGD(TAG, "Raw DA(146) data (base10): %s", data_str.c_str());
+        ESP_LOGW(TAG, "Raw DA(146) data (base10): %s", data_str.c_str());
         break;
       }
       case ToshibaCommandType::ENERGY_YEARLY: {
@@ -267,7 +267,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         for (size_t i = 6; i < rawData.size(); i++) {
           data_str += to_string(rawData[i]) + " ";
         }
-        ESP_LOGD(TAG, "Raw DB(70) data (base10): %s", data_str.c_str());
+        ESP_LOGW(TAG, "Raw DB(70) data (base10): %s", data_str.c_str());
         break;
       }
     }
