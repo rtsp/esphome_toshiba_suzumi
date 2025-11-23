@@ -42,7 +42,7 @@ const climate::ClimateMode IntToClimateMode(MODE mode) {
   }
 }
 
-const optional<FAN> StringToFanLevel(std::string mode) {
+const optional<FAN> StringToFanLevel(char * mode) {
   if (mode == CUSTOM_FAN_LEVEL_2) {
     return FAN::FANMODE_2;
   } else if (mode == CUSTOM_FAN_LEVEL_4) {
@@ -52,7 +52,7 @@ const optional<FAN> StringToFanLevel(std::string mode) {
   }
 }
 
-const std::string IntToCustomFanMode(FAN mode) {
+const char * IntToCustomFanMode(FAN mode) {
   switch (mode) {
     case FAN::FANMODE_2:
       return CUSTOM_FAN_LEVEL_2;
@@ -131,7 +131,7 @@ const LogString *climate_state_to_string(STATE mode) {
   }
 }
 
-const optional<SPECIAL_MODE> PresetToSpecialMode(const std::string &preset) {
+const optional<SPECIAL_MODE> PresetToSpecialMode(const char * &preset) {
   if (str_equals_case_insensitive(preset, SPECIAL_MODE_STANDARD)) {
     return SPECIAL_MODE::STANDARD;
   } else if (str_equals_case_insensitive(preset, SPECIAL_MODE_HI_POWER)) {
@@ -159,7 +159,7 @@ const optional<SPECIAL_MODE> PresetToSpecialMode(const std::string &preset) {
   }
 }
 
-const std::string SpecialModeToPreset(SPECIAL_MODE mode) {
+const char * SpecialModeToPreset(SPECIAL_MODE mode) {
   switch (mode) {
     case SPECIAL_MODE::STANDARD:
       return SPECIAL_MODE_STANDARD;
@@ -188,7 +188,7 @@ const std::string SpecialModeToPreset(SPECIAL_MODE mode) {
   }
 }
 
-const climate::ClimatePreset StringToClimatePreset(const std::string &preset) {
+const climate::ClimatePreset StringToClimatePreset(const char * &preset) {
   if (str_equals_case_insensitive(preset, SPECIAL_MODE_STANDARD)) {
     return climate::CLIMATE_PRESET_NONE;
   } else if (str_equals_case_insensitive(preset, SPECIAL_MODE_ECO)) {
@@ -205,7 +205,7 @@ const climate::ClimatePreset StringToClimatePreset(const std::string &preset) {
   }
 }
 
-const std::string ClimatePresetToString(climate::ClimatePreset preset) {
+const char * ClimatePresetToString(climate::ClimatePreset preset) {
   switch (preset) {
     case climate::CLIMATE_PRESET_NONE:
       return SPECIAL_MODE_STANDARD;

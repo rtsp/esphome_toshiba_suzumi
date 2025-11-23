@@ -177,7 +177,7 @@ void ToshibaClimateUart::process_command_queue_() {
     if (newCommand.cmd == ToshibaCommandType::DELAY) {
       this->command_queue_.erase(this->command_queue_.begin());
       return;
-    }    
+    }
     this->send_to_uart(this->command_queue_.front());
     this->command_queue_.erase(this->command_queue_.begin());
   }
@@ -255,7 +255,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         this->set_fan_mode_(CLIMATE_FAN_HIGH);
       } else {
         auto fanMode = IntToCustomFanMode(static_cast<FAN>(value));
-        ESP_LOGI(TAG, "Received fan mode: %s", fanMode.c_str());
+        ESP_LOGI(TAG, "Received fan mode: %s", fanMode);
         this->set_custom_fan_mode_(fanMode);
       }
       break;
@@ -314,12 +314,11 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         auto climate_preset = SpecialModeToClimatePreset(this->special_mode_.value());
         if (climate_preset.has_value()) {
           // Use standard preset
-          this->preset = climate_preset.value();
-          this->custom_preset.reset();
+          this->set_preset_(climate_preset.value());
+          this->clear_custom_preset_();
         } else {
           // Use custom preset
-          this->custom_preset = preset_string;
-          this->preset.reset();
+          this->set_custom_preset_(preset_string);
         }
       }
       this->publish_state();
@@ -439,7 +438,7 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
     }
   }
 
-  if (call.get_custom_fan_mode().has_value()) {
+  if (call.has_custom_fan_mode()) {
     auto fan_mode = *call.get_custom_fan_mode();
     auto payload = StringToFanLevel(fan_mode);
     if (payload.has_value()) {
@@ -559,32 +558,31 @@ ClimateTraits ToshibaClimateUart::traits() {
   traits.set_supports_current_temperature(true);
 
   // Toshiba AC has more FAN levels that standard climate component, we have to use custom.
-  traits.add_supported_fan_mode(CLIMATE_FAN_AUTO);
-  traits.add_supported_fan_mode(CLIMATE_FAN_QUIET);
-  traits.add_supported_fan_mode(CLIMATE_FAN_LOW);
-  traits.add_supported_custom_fan_mode(CUSTOM_FAN_LEVEL_2);
-  traits.add_supported_fan_mode(CLIMATE_FAN_MEDIUM);
-  traits.add_supported_custom_fan_mode(CUSTOM_FAN_LEVEL_4);
-  traits.add_supported_fan_mode(CLIMATE_FAN_HIGH);
+  traits.set_supported_fan_modes({CLIMATE_FAN_AUTO, CLIMATE_FAN_QUIET, CLIMATE_FAN_LOW, CLIMATE_FAN_MEDIUM, CLIMATE_FAN_HIGH});
+  traits.set_supported_custom_fan_modes({CUSTOM_FAN_LEVEL_2, CUSTOM_FAN_LEVEL_4});
 
   traits.set_visual_temperature_step(1);
   traits.set_visual_min_temperature(this->min_temp_);
   traits.set_visual_max_temperature(MAX_TEMP);
 
   // Add supported presets based on configuration
+  std::vector<climate::ClimatePreset> standard_presets;
+  std::vector<const char *> custom_presets;
   if (!supported_presets_.empty()) {
     // Presets are automatically enabled when adding supported presets
     for (const auto &preset_string : supported_presets_) {
       auto climate_preset = StringToClimatePreset(preset_string);
       if (climate_preset != climate::CLIMATE_PRESET_NONE || preset_string == SPECIAL_MODE_STANDARD) {
         // Use standard presets for mapped modes
-        traits.add_supported_preset(climate_preset);
+        standard_presets.push_back(climate_preset);
       } else {
         // Use custom presets for modes that don't map to standard ones
-        traits.add_supported_custom_preset(preset_string);
+        custom_presets.push_back(preset_string.c_str());
       }
     }
   }
+  traits.set_supported_presets(standard_presets);
+  traits.set_supported_custom_presets(custom_presets);
   return traits;
 }
 
