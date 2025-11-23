@@ -607,5 +607,13 @@ void ToshibaClimateUart::set_wifi_led(bool enabled) {
   }
 }
 
+/**
+ * Expose Custom Swing Mode Control
+ */
+void ToshibaClimateUart::set_swing_mode(uint8_t value) {
+    ESP_LOGI(TAG, "Swing Mode: %d", value);
+    this->sendCmd(ToshibaCommandType::SWING, value);
+}
+
 }  // namespace toshiba_suzumi
 }  // namespace esphome
