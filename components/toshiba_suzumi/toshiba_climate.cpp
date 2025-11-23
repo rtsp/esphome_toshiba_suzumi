@@ -277,6 +277,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
     case ToshibaCommandType::ROOM_TEMP:
       ESP_LOGI(TAG, "Received room temp: %d °C", value);
       this->current_temperature = value;
+      indoor_temp_sensor_->publish_state((int8_t) value);
       break;
     case ToshibaCommandType::OUTDOOR_TEMP:
       if (outdoor_temp_sensor_ != nullptr) {
