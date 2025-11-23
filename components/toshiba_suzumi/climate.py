@@ -17,6 +17,7 @@ DEPENDENCIES = ["uart"]
 AUTO_LOAD = ["sensor", "select"]
 
 CONF_ROOM_TEMP = "room_temp"
+CONF_INDOOR_TEMP = "indoor_temp"
 CONF_OUTDOOR_TEMP = "outdoor_temp"
 CONF_PWR_SELECT = "power_select"
 CONF_SPECIAL_MODE = "special_mode" # deprecated - replaced by CONF_SUPPORTED_PRESETS
@@ -38,6 +39,12 @@ if version.parse(ESPHOME_VERSION) >= version.parse("2025.5.0"):
     CONFIG_SCHEMA = climate.climate_schema(ToshibaClimateUart).extend(
         {
             cv.GenerateID(): cv.declare_id(ToshibaClimateUart),
+            cv.Optional(CONF_INDOOR_TEMP): sensor.sensor_schema(
+                    unit_of_measurement=UNIT_CELSIUS,
+                    accuracy_decimals=0,
+                    device_class=DEVICE_CLASS_TEMPERATURE,
+                    state_class=STATE_CLASS_MEASUREMENT,
+                ),
             cv.Optional(CONF_OUTDOOR_TEMP): sensor.sensor_schema(
                     unit_of_measurement=UNIT_CELSIUS,
                     accuracy_decimals=0,
@@ -65,6 +72,12 @@ else:
     CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         {
             cv.GenerateID(): cv.declare_id(ToshibaClimateUart),
+            cv.Optional(CONF_INDOOR_TEMP): sensor.sensor_schema(
+                    unit_of_measurement=UNIT_CELSIUS,
+                    accuracy_decimals=0,
+                    device_class=DEVICE_CLASS_TEMPERATURE,
+                    state_class=STATE_CLASS_MEASUREMENT,
+                ),
             cv.Optional(CONF_OUTDOOR_TEMP): sensor.sensor_schema(
                     unit_of_measurement=UNIT_CELSIUS,
                     accuracy_decimals=0,
@@ -93,6 +106,11 @@ async def to_code(config):
     await cg.register_component(var, config)
     await climate.register_climate(var, config)
     await uart.register_uart_device(var, config)
+
+    if CONF_INDOOR_TEMP in config:
+        conf = config[CONF_INDOOR_TEMP]
+        sens = await sensor.new_sensor(conf)
+        cg.add(var.set_indoor_temp_sensor(sens))
 
     if CONF_OUTDOOR_TEMP in config:
         conf = config[CONF_OUTDOOR_TEMP]
