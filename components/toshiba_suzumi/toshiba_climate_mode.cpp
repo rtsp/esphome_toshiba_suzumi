@@ -42,7 +42,12 @@ const climate::ClimateMode IntToClimateMode(MODE mode) {
   }
 }
 
-const optional<FAN> StringToFanLevel(std::string mode) {
+/**
+ * Convert a custom fan mode string to a Toshiba fan mode code
+ * @param mode The custom fan mode string to convert
+ * @return The Toshiba fan mode code
+ */
+const optional<FAN> StringToFanLevel(const char* mode) {
   if (mode == CUSTOM_FAN_LEVEL_2) {
     return FAN::FANMODE_2;
   } else if (mode == CUSTOM_FAN_LEVEL_4) {
@@ -52,7 +57,12 @@ const optional<FAN> StringToFanLevel(std::string mode) {
   }
 }
 
-const std::string IntToCustomFanMode(FAN mode) {
+/**
+ * Convert a Toshiba fan mode code to a custom fan mode string
+ * @param mode The Toshiba fan mode code to convert
+ * @return The custom fan mode string
+ */
+const char* IntToCustomFanMode(FAN mode) {
   switch (mode) {
     case FAN::FANMODE_2:
       return CUSTOM_FAN_LEVEL_2;
@@ -120,6 +130,28 @@ const climate::ClimateSwingMode IntToClimateSwingMode(SWING mode) {
   }
 }
 
+/**
+ * Convert a standard climate fan mode to a Toshiba fan mode code
+ * @param mode The climate fan mode to convert
+ * @return The Toshiba fan mode
+ */
+const optional<FAN> ClimateFanModeToInt(climate::ClimateFanMode mode) {
+  switch (mode) {
+    case climate::CLIMATE_FAN_AUTO:
+      return FAN::FAN_AUTO;
+    case climate::CLIMATE_FAN_QUIET:
+      return FAN::FAN_QUIET;
+    case climate::CLIMATE_FAN_LOW:
+      return FAN::FAN_LOW;
+    case climate::CLIMATE_FAN_MEDIUM:
+      return FAN::FAN_MEDIUM;
+    case climate::CLIMATE_FAN_HIGH:
+      return FAN::FAN_HIGH;
+    default:
+      return nullopt;
+  }
+}
+
 const LogString *climate_state_to_string(STATE mode) {
   switch (mode) {
     case STATE::ON:
@@ -131,7 +163,7 @@ const LogString *climate_state_to_string(STATE mode) {
   }
 }
 
-const optional<SPECIAL_MODE> PresetToSpecialMode(const std::string &preset) {
+const optional<SPECIAL_MODE> PresetToSpecialMode(const char* preset) {
   if (str_equals_case_insensitive(preset, SPECIAL_MODE_STANDARD)) {
     return SPECIAL_MODE::STANDARD;
   } else if (str_equals_case_insensitive(preset, SPECIAL_MODE_HI_POWER)) {
@@ -159,7 +191,7 @@ const optional<SPECIAL_MODE> PresetToSpecialMode(const std::string &preset) {
   }
 }
 
-const std::string SpecialModeToPreset(SPECIAL_MODE mode) {
+const char* SpecialModeToPreset(SPECIAL_MODE mode) {
   switch (mode) {
     case SPECIAL_MODE::STANDARD:
       return SPECIAL_MODE_STANDARD;
@@ -188,7 +220,7 @@ const std::string SpecialModeToPreset(SPECIAL_MODE mode) {
   }
 }
 
-const climate::ClimatePreset StringToClimatePreset(const std::string &preset) {
+const climate::ClimatePreset StringToClimatePreset(const char* preset) {
   if (str_equals_case_insensitive(preset, SPECIAL_MODE_STANDARD)) {
     return climate::CLIMATE_PRESET_NONE;
   } else if (str_equals_case_insensitive(preset, SPECIAL_MODE_ECO)) {
@@ -205,7 +237,7 @@ const climate::ClimatePreset StringToClimatePreset(const std::string &preset) {
   }
 }
 
-const std::string ClimatePresetToString(climate::ClimatePreset preset) {
+const char* ClimatePresetToString(climate::ClimatePreset preset) {
   switch (preset) {
     case climate::CLIMATE_PRESET_NONE:
       return SPECIAL_MODE_STANDARD;

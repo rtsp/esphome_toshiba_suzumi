@@ -252,7 +252,7 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
         this->set_fan_mode_(CLIMATE_FAN_HIGH);
       } else {
         auto fanMode = IntToCustomFanMode(static_cast<FAN>(value));
-        ESP_LOGI(TAG, "Received fan mode: %s", fanMode.c_str());
+        ESP_LOGI(TAG, "Received fan mode: %s", fanMode);
         this->set_custom_fan_mode_(fanMode);
       }
       break;
@@ -306,18 +306,18 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
     case ToshibaCommandType::SPECIAL_MODE: {
       this->special_mode_ = static_cast<SPECIAL_MODE>(value);
       auto preset_string = SpecialModeToPreset(this->special_mode_.value());
-      ESP_LOGI(TAG, "Received special mode: %s", preset_string.c_str());
+      ESP_LOGI(TAG, "Received special mode: %s", preset_string);
       // Only update preset if it's supported
       if (std::find(supported_presets_.begin(), supported_presets_.end(), preset_string) != supported_presets_.end()) {
         auto climate_preset = SpecialModeToClimatePreset(this->special_mode_.value());
         if (climate_preset.has_value()) {
           // Use standard preset
-          this->preset = climate_preset.value();
-          this->custom_preset.reset();
+          this->set_preset_(climate_preset.value());
+          this->set_custom_preset_(nullptr);
         } else {
           // Use custom preset
-          this->custom_preset = preset_string;
-          this->preset.reset();
+          this->set_custom_preset_(preset_string);
+          this->set_preset_(climate::CLIMATE_PRESET_NONE);
         }
       }
       this->publish_state();
@@ -342,8 +342,8 @@ void ToshibaClimateUart::dump_config() {
   }
   if (!supported_presets_.empty()) {
     ESP_LOGCONFIG(TAG, "Supported presets:");
-    for (const auto &preset : supported_presets_) {
-      ESP_LOGCONFIG(TAG, "  - %s", preset.c_str());
+    for (const char* &preset : supported_presets_) {
+      ESP_LOGCONFIG(TAG, "  - %s", preset);
     }
   }
   ESP_LOGI(TAG, "Min Temp: %d", this->min_temp_);
@@ -414,34 +414,19 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
 
   if (call.get_fan_mode().has_value()) {
     auto fan_mode = *call.get_fan_mode();
-    if (fan_mode == CLIMATE_FAN_AUTO) {
-      ESP_LOGD(TAG, "Setting fan mode to %s", climate_fan_mode_to_string(fan_mode));
-      this->set_fan_mode_(fan_mode);
-      this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(FAN::FAN_AUTO));
-    } else if (fan_mode == CLIMATE_FAN_QUIET) {
-      ESP_LOGD(TAG, "Setting fan mode to %s", climate_fan_mode_to_string(fan_mode));
-      this->set_fan_mode_(fan_mode);
-      this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(FAN::FAN_QUIET));
-    } else if (fan_mode == CLIMATE_FAN_LOW) {
-      ESP_LOGD(TAG, "Setting fan mode to %s", climate_fan_mode_to_string(fan_mode));
-      this->set_fan_mode_(fan_mode);
-      this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(FAN::FAN_LOW));
-    } else if (fan_mode == CLIMATE_FAN_MEDIUM) {
-      ESP_LOGD(TAG, "Setting fan mode to %s", climate_fan_mode_to_string(fan_mode));
-      this->set_fan_mode_(fan_mode);
-      this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(FAN::FAN_MEDIUM));
-    } else if (fan_mode == CLIMATE_FAN_HIGH) {
-      ESP_LOGD(TAG, "Setting fan mode to %s", climate_fan_mode_to_string(fan_mode));
-      this->set_fan_mode_(fan_mode);
-      this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(FAN::FAN_HIGH));
+    ESP_LOGD(TAG, "Setting fan mode to %s", climate_fan_mode_to_string(fan_mode));
+    this->set_fan_mode_(fan_mode);
+    auto fan_value = ClimateFanModeToInt(fan_mode);
+    if (fan_value.has_value()) {
+      this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(fan_value.value()));
     }
   }
 
-  if (call.get_custom_fan_mode().has_value()) {
-    auto fan_mode = *call.get_custom_fan_mode();
+  if (call.has_custom_fan_mode()) {
+    const char* fan_mode = call.get_custom_fan_mode();
     auto payload = StringToFanLevel(fan_mode);
     if (payload.has_value()) {
-      ESP_LOGD(TAG, "Setting fan mode to %s", fan_mode);
+      ESP_LOGD(TAG, "Setting fan mode to custom: %s", fan_mode);
       this->set_custom_fan_mode_(fan_mode);
       this->sendCmd(ToshibaCommandType::FAN, static_cast<uint8_t>(payload.value()));
     }
@@ -460,12 +445,12 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
     auto preset_string = ClimatePresetToString(preset);
     auto special_mode = PresetToSpecialMode(preset_string);
     if (special_mode.has_value()) {
-      ESP_LOGD(TAG, "Setting preset to %s", preset_string.c_str());
+      ESP_LOGD(TAG, "Setting preset to %s", preset_string);
       this->sendCmd(ToshibaCommandType::SPECIAL_MODE, static_cast<uint8_t>(special_mode.value()));
       // Set standard preset
-      this->preset = preset;
+      this->set_preset_(preset);
       // Reset custom preset
-      this->custom_preset.reset();
+      this->set_custom_preset_(nullptr);
 
       // Handle special temperature logic for "8 degrees" mode
       if (special_mode.value() != this->special_mode_) {
@@ -482,20 +467,20 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
         this->special_mode_ = special_mode.value();
       }
     } else {
-      ESP_LOGW(TAG, "Unknown preset: %s", preset_string.c_str());
+      ESP_LOGW(TAG, "Unknown preset: %s", preset_string);
     }
   }
 
-  if (call.get_custom_preset().has_value()) {
-    auto custom_preset = *call.get_custom_preset();
+  if (call.has_custom_preset()) {
+    const char* custom_preset = call.get_custom_preset();
     auto special_mode = PresetToSpecialMode(custom_preset);
     if (special_mode.has_value()) {
-      ESP_LOGD(TAG, "Setting custom preset to %s", custom_preset.c_str());
+      ESP_LOGD(TAG, "Setting custom preset to %s", custom_preset);
       this->sendCmd(ToshibaCommandType::SPECIAL_MODE, static_cast<uint8_t>(special_mode.value()));
       // Set custom preset
-      this->custom_preset = custom_preset;
+      this->set_custom_preset_(custom_preset);
       // Reset standard preset
-      this->preset.reset();
+      this->set_preset_(climate::CLIMATE_PRESET_NONE);
 
       // Handle special temperature logic for "8 degrees" mode
       if (special_mode.value() != this->special_mode_) {
@@ -512,7 +497,7 @@ void ToshibaClimateUart::control(const climate::ClimateCall &call) {
         this->special_mode_ = special_mode.value();
       }
     } else {
-      ESP_LOGW(TAG, "Unknown custom preset: %s", custom_preset.c_str());
+      ESP_LOGW(TAG, "Unknown custom preset: %s", custom_preset);
     }
   }
 
@@ -554,16 +539,15 @@ ClimateTraits ToshibaClimateUart::traits() {
       climate::CLIMATE_SWING_VERTICAL
     });
   }
-  traits.set_supports_current_temperature(true);
+  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
 
   // Toshiba AC has more FAN levels that standard climate component, we have to use custom.
   traits.add_supported_fan_mode(CLIMATE_FAN_AUTO);
   traits.add_supported_fan_mode(CLIMATE_FAN_QUIET);
   traits.add_supported_fan_mode(CLIMATE_FAN_LOW);
-  traits.add_supported_custom_fan_mode(CUSTOM_FAN_LEVEL_2);
   traits.add_supported_fan_mode(CLIMATE_FAN_MEDIUM);
-  traits.add_supported_custom_fan_mode(CUSTOM_FAN_LEVEL_4);
   traits.add_supported_fan_mode(CLIMATE_FAN_HIGH);
+  traits.set_supported_custom_fan_modes({CUSTOM_FAN_LEVEL_2, CUSTOM_FAN_LEVEL_4});
 
   traits.set_visual_temperature_step(1);
   traits.set_visual_min_temperature(this->min_temp_);
@@ -571,16 +555,19 @@ ClimateTraits ToshibaClimateUart::traits() {
 
   // Add supported presets based on configuration
   if (!supported_presets_.empty()) {
+    std::vector<const char*> custom_preset_names;
     // Presets are automatically enabled when adding supported presets
-    for (const auto &preset_string : supported_presets_) {
-      auto climate_preset = StringToClimatePreset(preset_string);
+    for (const char* &preset_string : supported_presets_) {
+      climate::ClimatePreset climate_preset = StringToClimatePreset(preset_string);
       if (climate_preset != climate::CLIMATE_PRESET_NONE || preset_string == SPECIAL_MODE_STANDARD) {
         // Use standard presets for mapped modes
         traits.add_supported_preset(climate_preset);
       } else {
-        // Use custom presets for modes that don't map to standard ones
-        traits.add_supported_custom_preset(preset_string);
+        custom_preset_names.push_back(preset_string);
       }
+    }
+    if (!custom_preset_names.empty()) {
+      traits.set_supported_custom_presets(custom_preset_names);
     }
   }
   return traits;

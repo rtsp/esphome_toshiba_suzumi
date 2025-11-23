@@ -80,19 +80,21 @@ const climate::ClimateMode IntToClimateMode(MODE mode);
 const SWING ClimateSwingModeToInt(climate::ClimateSwingMode mode);
 const climate::ClimateSwingMode IntToClimateSwingMode(SWING mode);
 
+const optional<FAN> ClimateFanModeToInt(climate::ClimateFanMode mode);
+
 const LogString *climate_state_to_string(STATE mode);
 
-const optional<FAN> StringToFanLevel(std::string mode);
-const ::std::string IntToCustomFanMode(FAN mode);
+const optional<FAN> StringToFanLevel(const char* mode);
+const char* IntToCustomFanMode(FAN mode);
 
 const optional<PWR_LEVEL> StringToPwrLevel(const std::string &mode);
 const std::string IntToPowerLevel(PWR_LEVEL mode);
 
-const optional<SPECIAL_MODE> PresetToSpecialMode(const std::string &preset);
-const std::string SpecialModeToPreset(SPECIAL_MODE mode);
+const optional<SPECIAL_MODE> PresetToSpecialMode(const char* preset);
+const char* SpecialModeToPreset(SPECIAL_MODE mode);
 
-const climate::ClimatePreset StringToClimatePreset(const std::string &preset);
-const std::string ClimatePresetToString(climate::ClimatePreset preset);
+const climate::ClimatePreset StringToClimatePreset(const char* preset);
+const char* ClimatePresetToString(climate::ClimatePreset preset);
 const optional<SPECIAL_MODE> ClimatePresetToSpecialMode(climate::ClimatePreset preset);
 const optional<climate::ClimatePreset> SpecialModeToClimatePreset(SPECIAL_MODE mode);
 

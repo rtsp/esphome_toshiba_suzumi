@@ -8,27 +8,21 @@ This component use ESPHome UART to connect with Toshiba AC and communicates dire
 
 <a href="https://www.buymeacoffee.com/pedobryk" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-## ‼️ Important info for ESPHome 2025.10.3 and newer
-ESPHome 2025.10.3 contains a change in UART PIN initialization which breaks the communication with AC unit after cold restart.
+## ESPHome versions
+Current main branch supports latest ESPHome 2025.11. There have been some internal changes in climate entity in ESPHome which makes it incompatible with previous ESPHome versions.
 
-As a workaround, you need to use older UART component from 2025.10.2 like this:
+If you use ESPHome 2025.10 or earlier, use tag 2025.10 like this:
+
 ```
-esp32:
-  board: esp32dev
-  framework:
-    type: esp-idf
-
 external_components:
   - source: 
       type: git
-      url: https://github.com/pedobry/esphome_toshiba_suzumi      
+      url: https://github.com/pedobry/esphome_toshiba_suzumi
+      ref: 2025.10
     components: [toshiba_suzumi]
     refresh: 1min
-  - source: github://esphome/esphome@2025.10.2
-    components: [uart]
-    refresh: 1min
 ```
-**Important:** If you use 2025.10.3 or 2025.10.4 without this workaround and the AC unit stops responding (no RX communication), you need to disconnect AC from main power to reset it before you can use this workaround.
+This older version won't be maintained, I'd recommend to upgrade to ESPHome 2025.11.
 
 ## Supported Toshiba units
 
