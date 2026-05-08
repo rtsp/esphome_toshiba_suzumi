@@ -177,8 +177,11 @@ void ToshibaClimateUart::process_command_queue_() {
     this->rx_message_.clear();
   }
 
-  // when there is no RX message and there is a command to send
-  if (cmdDelay > COMMAND_DELAY && !this->command_queue_.empty() && this->rx_message_.empty()) {
+  // when there is no RX message (or we are in a gap) and there is a command to send
+  if (cmdDelay > COMMAND_DELAY && !this->command_queue_.empty()) {
+    if (this->command_queue_.size() > 10) {
+        ESP_LOGW(TAG, "Command queue is backing up! Size: %d", this->command_queue_.size());
+    }
     auto newCommand = this->command_queue_.front();
     if (newCommand.cmd == ToshibaCommandType::DELAY && cmdDelay < newCommand.delay) {
       // delay command did not finished yet
