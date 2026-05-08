@@ -233,7 +233,12 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       value = rawData[13];
       break;
     case 16:  // probably ACK for issued command
-      ESP_LOGD(TAG, "Received message with length: %d and value %s", length, format_hex_pretty(rawData).c_str());
+      ESP_LOGV(TAG, "Received message with length: %d and value %s", length, format_hex_pretty(rawData).c_str());
+      // Check if this is a SET_DATE_TIME ACK (ends in 0x99 0x99)
+      if (rawData[14] == 0x99) {
+          ESP_LOGI(TAG, "AC unit acknowledged time synchronization.");
+          this->time_synced_ = true;
+      }
       return;
     case 17:  // response to requestData with the actual value of sensor/setting
       sensor = static_cast<ToshibaCommandType>(rawData[14]);
