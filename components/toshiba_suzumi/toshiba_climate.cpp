@@ -137,6 +137,10 @@ void ToshibaClimateUart::getInitData() {
   this->requestData(ToshibaCommandType::ROOM_TEMP);
   this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   this->requestData(ToshibaCommandType::SPECIAL_MODE);
+  if (this->energy_sensor_ != nullptr || this->power_sensor_ != nullptr) {
+    this->sync_time_();
+    this->sync_energy_();
+  }
 }
 
 void ToshibaClimateUart::setup() {
@@ -218,6 +222,10 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       sensor = static_cast<ToshibaCommandType>(rawData[14]);
       value = rawData[15];
       break;
+    case 70:  // energy daily/yearly response
+      sensor = static_cast<ToshibaCommandType>(rawData[14]);
+      value = 0;
+      break;
     case 22:  // extended status message (e.g., ODU_STATUS / IDU_STATUS)
       sensor = static_cast<ToshibaCommandType>(rawData[12]);
       value = 0;
@@ -226,12 +234,28 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       sensor = static_cast<ToshibaCommandType>(rawData[14]);
       value = 0;
       break;
+    case 247: // SET_DATE_TIME response
+      ESP_LOGD(TAG, "Received SET_DATE_TIME ACK");
+      return;
     default:
       ESP_LOGW(TAG, "Received unknown message with length: %d and value %s", length,
                format_hex_pretty(rawData).c_str());
       return;
   }
   switch (sensor) {
+    case ToshibaCommandType::ENERGY_DAILY: {
+      ESP_LOGI(TAG, "Received daily energy update");
+      uint32_t total_energy = 0;
+      for (uint8_t i = 0; i < 24; i++) {
+        this->daily_energy_usage_[i] = (rawData[21 + (i * 2) + 1] << 8) | rawData[21 + (i * 2)];
+        total_energy += this->daily_energy_usage_[i];
+      }
+      if (this->energy_sensor_ != nullptr) {
+        this->energy_sensor_->publish_state(total_energy);
+      }
+      this->estimate_wattage_(total_energy);
+      break;
+    }
     case ToshibaCommandType::TARGET_TEMP:
       ESP_LOGI(TAG, "Received target temp: %d", value);
       if (this->special_mode_ == SPECIAL_MODE::EIGHT_DEG) {
@@ -426,6 +450,14 @@ void ToshibaClimateUart::update() {
   this->requestData(ToshibaCommandType::ROOM_TEMP);
   if (outdoor_temp_sensor_ != nullptr) {
     this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
+  }
+  uint32_t now = millis();
+  if ((this->energy_sensor_ != nullptr || this->power_sensor_ != nullptr) && (now - this->last_energy_sync_ > 60000)) {
+    // Sync time every hour
+    if (now - this->last_time_sync_ > 3600000) {
+      this->sync_time_();
+    }
+    this->sync_energy_();
   }
 }
 
@@ -666,6 +698,63 @@ void ToshibaClimateUart::set_wifi_led(bool enabled) {
     this->sendCmd(ToshibaCommandType::WIFI_LED_1, 0x00);
     this->sendCmd(ToshibaCommandType::WIFI_LED_2, 0x80);
   }
+}
+
+void ToshibaClimateUart::sync_time_() {
+  if (this->time_ == nullptr || !this->time_->now().is_valid()) return;
+  auto now = this->time_->now();
+
+  ESP_LOGD(TAG, "Syncing time to AC unit: %04d-%02d-%02d %02d:%02d:%02d", now.year, now.month, now.day_of_month, now.hour,
+           now.minute, now.second);
+
+  std::vector<uint8_t> payload = {2, 0, 3, 16, 0, 0, 0xef, 1, 48, 1, 0, 0xea, 0x99};
+  payload.push_back((now.year - 2000) + 100);
+  payload.push_back(now.month - 1);
+  payload.push_back(now.day_of_month);
+  payload.push_back(now.hour);
+  payload.push_back(now.minute);
+  payload.push_back(now.second);
+  payload.push_back(now.day_of_week - 1); // Sunday=0
+  payload.push_back(0x00);
+  payload.push_back(0x00);
+  for (int i = 0; i < 224; i++) {
+    payload.push_back(0xFF);
+  }
+  payload.push_back(checksum(payload, payload.size()));
+  this->enqueue_command_(ToshibaCommand{.cmd = ToshibaCommandType::SET_DATE_TIME, .payload = payload});
+  this->last_time_sync_ = millis();
+}
+
+void ToshibaClimateUart::sync_energy_() {
+  ESP_LOGV(TAG, "Syncing energy data");
+  this->requestData(ToshibaCommandType::ENERGY_DAILY);
+  this->last_energy_sync_ = millis();
+}
+
+void ToshibaClimateUart::estimate_wattage_(uint32_t current_energy) {
+  uint32_t now = millis();
+  if (this->last_energy_update_ms_ == 0 || current_energy < this->last_total_daily_energy_) {
+    this->last_total_daily_energy_ = current_energy;
+    this->last_energy_update_ms_ = now;
+    return;
+  }
+
+  uint32_t energy_diff = current_energy - this->last_total_daily_energy_;
+  uint32_t time_diff = now - this->last_energy_update_ms_;
+
+  if (time_diff > 0 && energy_diff > 0) {
+    float wattage = (energy_diff * 3600000.0f) / time_diff;
+    if (this->power_sensor_ != nullptr) {
+      this->power_sensor_->publish_state(wattage);
+    }
+  } else if (energy_diff == 0) {
+    if (this->power_sensor_ != nullptr) {
+      this->power_sensor_->publish_state(0);
+    }
+  }
+
+  this->last_total_daily_energy_ = current_energy;
+  this->last_energy_update_ms_ = now;
 }
 
 }  // namespace toshiba_suzumi
