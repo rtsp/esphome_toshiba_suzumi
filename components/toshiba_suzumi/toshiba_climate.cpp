@@ -37,7 +37,11 @@ ToshibaClimateUart::ToshibaClimateUart() {
  */
 void ToshibaClimateUart::send_to_uart(ToshibaCommand command) {
   this->last_command_timestamp_ = millis();
-  ESP_LOGV(TAG, "Sending: [%s]", format_hex_pretty(command.payload).c_str());
+  if (command.payload.size() < 50) {
+    ESP_LOGV(TAG, "Sending: [%s] (%d bytes)", format_hex_pretty(command.payload).c_str(), (int)command.payload.size());
+  } else {
+    ESP_LOGV(TAG, "Sending long packet (%d bytes)", (int)command.payload.size());
+  }
   this->write_array(command.payload);
 }
 
@@ -761,6 +765,7 @@ void ToshibaClimateUart::sync_time_() {
   }
   payload.push_back(checksum(payload, payload.size()));
   this->enqueue_command_(ToshibaCommand{.cmd = ToshibaCommandType::SET_DATE_TIME, .payload = payload});
+  this->enqueue_command_(ToshibaCommand{.cmd = ToshibaCommandType::DELAY, .delay = 5000});
   this->last_time_sync_ = millis();
 }
 
