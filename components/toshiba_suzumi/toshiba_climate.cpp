@@ -249,7 +249,8 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       value = 0;
       break;
     case 247: // SET_DATE_TIME response
-      ESP_LOGD(TAG, "Received SET_DATE_TIME ACK");
+      ESP_LOGI(TAG, "AC unit acknowledged time synchronization.");
+      this->time_synced_ = true;
       return;
     default:
       ESP_LOGW(TAG, "Received unknown message with length: %d and value %s", length,
@@ -479,10 +480,14 @@ void ToshibaClimateUart::update() {
   uint32_t now = millis();
   ESP_LOGV(TAG, "Update: energy_sensor=%p, power_sensor=%p, time=%p, diff=%u", this->energy_sensor_, this->power_sensor_, this->time_, (now - this->last_energy_sync_));
   if ((this->energy_sensor_ != nullptr || this->power_sensor_ != nullptr) && (now - this->last_energy_sync_ > 60000)) {
-    // Sync time every hour, or every minute if it hasn't succeeded yet
-    if (this->last_time_sync_ == 0 || now - this->last_time_sync_ > 3600000) {
-      ESP_LOGI(TAG, "Triggering scheduled time synchronization...");
-      this->sync_time_();
+    // Sync time every hour, or every 5 minutes if it hasn't succeeded yet
+    if (!this->time_synced_ || (now - this->last_time_sync_ > 3600000)) {
+      if (!this->time_synced_ && (this->last_time_sync_ != 0 && now - this->last_time_sync_ < 300000)) {
+          // Don't spam, wait 5 mins between retries if not synced
+      } else {
+          ESP_LOGI(TAG, "Triggering scheduled time synchronization...");
+          this->sync_time_();
+      }
     }
     this->sync_energy_();
   }

@@ -107,6 +107,7 @@ class ToshibaClimateUart : public PollingComponent, public climate::Climate, pub
   uint32_t last_time_sync_ = 0;
   uint32_t last_total_daily_energy_ = 0;
   uint32_t last_energy_update_ms_ = 0;
+  bool time_synced_ = false;
 
   void enqueue_command_(const ToshibaCommand &command);
   void send_to_uart(const ToshibaCommand command);
