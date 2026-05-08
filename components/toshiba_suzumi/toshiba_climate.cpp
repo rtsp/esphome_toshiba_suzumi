@@ -37,11 +37,7 @@ ToshibaClimateUart::ToshibaClimateUart() {
  */
 void ToshibaClimateUart::send_to_uart(ToshibaCommand command) {
   this->last_command_timestamp_ = millis();
-  if (command.payload.size() < 50) {
-    ESP_LOGV(TAG, "Sending: [%s] (%d bytes)", format_hex_pretty(command.payload).c_str(), (int)command.payload.size());
-  } else {
-    ESP_LOGV(TAG, "Sending long packet (%d bytes)", (int)command.payload.size());
-  }
+  ESP_LOGV(TAG, "Sending: [%s]", format_hex_pretty(command.payload).c_str());
   this->write_array(command.payload);
 }
 
@@ -153,7 +149,6 @@ void ToshibaClimateUart::getInitData() {
   this->requestData(ToshibaCommandType::SPECIAL_MODE);
   if (this->energy_sensor_ != nullptr || this->power_sensor_ != nullptr) {
     this->requestData(ToshibaCommandType::ENERGY_DAILY);
-    this->requestData(ToshibaCommandType::ENERGY_YEARLY);
   }
 }
 
@@ -183,9 +178,6 @@ void ToshibaClimateUart::process_command_queue_() {
 
   // when there is no RX message (or we are in a gap) and there is a command to send
   if (cmdDelay > COMMAND_DELAY && !this->command_queue_.empty()) {
-    if (this->command_queue_.size() > 10) {
-        ESP_LOGW(TAG, "Command queue is backing up! Size: %d", this->command_queue_.size());
-    }
     auto newCommand = this->command_queue_.front();
     if (newCommand.cmd == ToshibaCommandType::DELAY && cmdDelay < newCommand.delay) {
       // delay command did not finished yet
@@ -233,19 +225,19 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       value = rawData[13];
       break;
     case 16:  // probably ACK for issued command
-      ESP_LOGV(TAG, "Received message with length: %d and value %s", length, format_hex_pretty(rawData).c_str());
       // Check if this is a SET_DATE_TIME ACK (ends in 0x99 0x99)
       if (rawData[14] == 0x99) {
-          ESP_LOGI(TAG, "AC unit acknowledged time synchronization.");
+          ESP_LOGD(TAG, "AC unit acknowledged time synchronization.");
           this->time_synced_ = true;
       }
+      ESP_LOGD(TAG, "Received message with length: %d and value %s", length, format_hex_pretty(rawData).c_str());
       return;
     case 17:  // response to requestData with the actual value of sensor/setting
       sensor = static_cast<ToshibaCommandType>(rawData[14]);
       value = rawData[15];
       break;
     case 69:
-    case 70:  // energy daily/yearly response
+    case 70:  // energy daily response
       sensor = static_cast<ToshibaCommandType>(rawData[14]);
       value = 0;
       break;
@@ -257,10 +249,6 @@ void ToshibaClimateUart::parseResponse(std::vector<uint8_t> rawData) {
       sensor = static_cast<ToshibaCommandType>(rawData[14]);
       value = 0;
       break;
-    case 247: // SET_DATE_TIME response
-      ESP_LOGI(TAG, "AC unit acknowledged time synchronization.");
-      this->time_synced_ = true;
-      return;
     default:
       ESP_LOGW(TAG, "Received unknown message with length: %d and value %s", length,
                format_hex_pretty(rawData).c_str());
@@ -487,13 +475,10 @@ void ToshibaClimateUart::update() {
     this->requestData(ToshibaCommandType::OUTDOOR_TEMP);
   }
   uint32_t now = millis();
-  ESP_LOGV(TAG, "Update: energy_sensor=%p, power_sensor=%p, time=%p, diff=%u", this->energy_sensor_, this->power_sensor_, this->time_, (now - this->last_energy_sync_));
   if ((this->energy_sensor_ != nullptr || this->power_sensor_ != nullptr) && (now - this->last_energy_sync_ > 60000)) {
     // Sync time every hour, or every 5 minutes if it hasn't succeeded yet
     if (!this->time_synced_ || (now - this->last_time_sync_ > 3600000)) {
-      if (!this->time_synced_ && (this->last_time_sync_ != 0 && now - this->last_time_sync_ < 300000)) {
-          // Don't spam, wait 5 mins between retries if not synced
-      } else {
+      if (this->time_synced_ || (this->last_time_sync_ == 0 || now - this->last_time_sync_ > 300000)) {
           ESP_LOGI(TAG, "Triggering scheduled time synchronization...");
           this->sync_time_();
       }
